@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let connection_status = client.get_connection_status()?;
     let xdsl_status = client.get_xdsl_connection_status()?;
     // dbg!(client.get_lan_interfaces()?);
-    // dbg!(client.get_hosts_on_lan("pub")?);
+    let lan_hosts = client.get_hosts_on_lan("pub")?;
 
     println!(
         "connection_status,api_domain={} type={:?},media={:?},state={:?} {}",
@@ -62,6 +62,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "xdsl_stats,api_domain={},direction=up maxrate={}i,rate={}i {}",
         client.api_domain, xdsl_status.up.maxrate, xdsl_status.up.rate, ts
     );
+    println!(
+        "xdsl_stats,api_domain={},direction=down maxrate={}i,rate={}i {}",
+        client.api_domain, xdsl_status.down.maxrate, xdsl_status.down.rate, ts
+    );
+
+    for host in lan_hosts {
+        println!(
+            "lan_hosts,api_domain={},primary_name={},l2ident={} reachable={},active={} {}",
+            client.api_domain,
+            if host.primary_name == "" {
+                String::from("null")
+            } else {
+                host.primary_name.replace(' ', "_")
+            },
+            host.l2ident.id,
+            host.reachable,
+            host.active,
+            ts
+        );
+    }
 
     Ok(())
 }
