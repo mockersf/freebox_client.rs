@@ -14,3 +14,5 @@ hmac-sha1 = "0.1"
 hocon = "0.3"
 anyhow = "1.0"
 thiserror = "1.0"
+clap = { git = "https://github.com/clap-rs/clap" }
+rand = "0.7"

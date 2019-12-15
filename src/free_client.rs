@@ -178,7 +178,7 @@ pub struct LanHost {
 }
 
 impl FreeClient {
-    pub fn new(app_id: &str) -> anyhow::Result<FreeClient> {
+    pub fn new(app_id: &str, config_path: &str) -> anyhow::Result<FreeClient> {
         let http_client = reqwest::ClientBuilder::new()
             .danger_accept_invalid_certs(true)
             .build()?;
@@ -188,7 +188,7 @@ impl FreeClient {
         let api_domain = unauth.get_api_domain()?;
 
         let conf: Option<Configuration> = hocon::HoconLoader::new()
-            .load_file("free.conf")
+            .load_file(config_path)
             .and_then(|hc| hc.resolve())
             .ok();
         let app_token = match conf.and_then(|c| c.app_token) {

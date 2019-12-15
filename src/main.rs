@@ -1,7 +1,25 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use clap::Clap;
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
+use serde::Deserialize;
+
 mod free_client;
 mod unauthorized_client;
 
-use std::time::{SystemTime, UNIX_EPOCH};
+#[derive(Clap)]
+#[clap(version = "1.0", author = "François")]
+struct Opts {
+    /// conf path
+    #[clap(short = "c", long = "config", default_value = "free.conf")]
+    config: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ConfigurationOnlyApp {
+    app_id: String,
+}
 
 fn ts_nano() -> u128 {
     let start = SystemTime::now();
@@ -13,9 +31,18 @@ fn ts_nano() -> u128 {
         * 1_000_000
 }
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let app_id = String::from("gjdjvkhgf");
+    let opts: Opts = Opts::parse();
 
-    let client = free_client::FreeClient::new(&app_id)?;
+    let conf: Option<ConfigurationOnlyApp> = hocon::HoconLoader::new()
+        .load_file(&opts.config)
+        .and_then(|hc| hc.resolve())
+        .ok();
+
+    let app_id = conf
+        .map(|conf| conf.app_id)
+        .unwrap_or_else(|| thread_rng().sample_iter(&Alphanumeric).take(15).collect());
+
+    let client = free_client::FreeClient::new(&app_id, &opts.config)?;
 
     let ts = ts_nano();
 
