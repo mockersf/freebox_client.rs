@@ -5,8 +5,7 @@ use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde::Deserialize;
 
-mod free_client;
-mod unauthorized_client;
+use freebox::free_client;
 
 #[derive(Clap)]
 #[clap(version = "1.0", author = "François")]
