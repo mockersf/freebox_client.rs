@@ -30,7 +30,9 @@ fn ts_nano() -> u128 {
     (since_the_epoch.as_secs() as u128 * 1_000 + since_the_epoch.subsec_millis() as u128)
         * 1_000_000
 }
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opts: Opts = Opts::parse();
 
     let conf: Option<ConfigurationOnlyApp> = hocon::HoconLoader::new()
@@ -42,14 +44,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|conf| conf.app_id)
         .unwrap_or_else(|| thread_rng().sample_iter(&Alphanumeric).take(15).collect());
 
-    let client = free_client::FreeClient::new(&app_id, &opts.config)?;
+    let client = free_client::FreeClient::new(&app_id, &opts.config).await?;
 
     let ts = ts_nano();
 
-    let connection_status = client.get_connection_status()?;
-    let xdsl_status = client.get_xdsl_connection_status()?;
+    let connection_status = client.get_connection_status().await?;
+    let xdsl_status = client.get_xdsl_connection_status().await?;
     // dbg!(client.get_lan_interfaces()?);
-    let lan_hosts = client.get_hosts_on_lan("pub")?;
+    let lan_hosts = client.get_hosts_on_lan("pub").await?;
 
     println!(
         "connection_status,api_domain={} type={:?},media={:?},state={:?} {}",

@@ -178,14 +178,14 @@ pub struct LanHost {
 }
 
 impl FreeClient {
-    pub fn new(app_id: &str, config_path: &str) -> anyhow::Result<FreeClient> {
+    pub async fn new(app_id: &str, config_path: &str) -> anyhow::Result<FreeClient> {
         let http_client = reqwest::ClientBuilder::new()
             .danger_accept_invalid_certs(true)
             .build()?;
 
         let unauth = crate::unauthorized_client::UnauthorizedClient::new(&http_client, app_id);
-        let base_url = unauth.get_base_url()?;
-        let api_domain = unauth.get_api_domain()?;
+        let base_url = unauth.get_base_url().await?;
+        let api_domain = unauth.get_api_domain().await?;
 
         let conf: Option<Configuration> = hocon::HoconLoader::new()
             .load_file(config_path)
@@ -194,7 +194,7 @@ impl FreeClient {
         let app_token = match conf.and_then(|c| c.app_token) {
             Some(app_token) => app_token,
             None => {
-                let app_token = unauth.authorize(&base_url)?;
+                let app_token = unauth.authorize(&base_url).await?;
                 let new_config = Configuration {
                     app_id: String::from(app_id),
                     app_token: Some(app_token.clone()),
@@ -210,57 +210,62 @@ impl FreeClient {
             base_url,
             api_domain,
             app_id: String::from(app_id),
-            app_token: app_token,
+            app_token,
         })
     }
 
-    fn get<T>(&self, url: &str) -> anyhow::Result<T>
+    async fn get<T>(&self, url: &str) -> anyhow::Result<T>
     where
         T: serde::de::DeserializeOwned,
     {
         let session =
             crate::unauthorized_client::UnauthorizedClient::new(&self.http_client, &self.app_id)
-                .get_session(&self.base_url, &self.app_token)?;
+                .get_session(&self.base_url, &self.app_token)
+                .await?;
 
         Ok(self
             .http_client
             .get(url)
             .header("X-Fbx-App-Auth", session)
-            .send()?
-            .json::<Response<T>>()?
+            .send()
+            .await?
+            .json::<Response<T>>()
+            .await?
             .result)
     }
 
     #[allow(unused)]
-    fn get_text(&self, url: &str) -> anyhow::Result<String> {
+    async fn get_text(&self, url: &str) -> anyhow::Result<String> {
         let session =
             crate::unauthorized_client::UnauthorizedClient::new(&self.http_client, &self.app_id)
-                .get_session(&self.base_url, &self.app_token)?;
+                .get_session(&self.base_url, &self.app_token)
+                .await?;
 
         Ok(self
             .http_client
             .get(url)
             .header("X-Fbx-App-Auth", session)
-            .send()?
-            .text()?)
+            .send()
+            .await?
+            .text()
+            .await?)
     }
 
-    pub fn get_connection_status(&self) -> anyhow::Result<ConnectionStatus> {
+    pub async fn get_connection_status(&self) -> anyhow::Result<ConnectionStatus> {
         self.get(&format!("{}{}", self.base_url, "connection/"))
+            .await
     }
 
-    pub fn get_xdsl_connection_status(&self) -> anyhow::Result<XDSLConnectionStatus> {
+    pub async fn get_xdsl_connection_status(&self) -> anyhow::Result<XDSLConnectionStatus> {
         self.get(&format!("{}{}", self.base_url, "connection/xdsl/"))
+            .await
     }
 
-    pub fn get_lan_interfaces(&self) -> anyhow::Result<Vec<LanInterface>> {
-        self.get(&format!("{}{}", self.base_url, "lan/browser/interfaces/"))
-    }
-
-    pub fn get_hosts_on_lan(&self, interface: &str) -> anyhow::Result<Vec<LanHost>> {
+    pub async fn get_hosts_on_lan(&self, interface: &str) -> anyhow::Result<Vec<LanHost>> {
         self.get(&format!(
             "{}{}/{}/",
             self.base_url, "lan/browser", interface
         ))
+        .await
     }
 }

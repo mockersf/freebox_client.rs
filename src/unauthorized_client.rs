@@ -65,7 +65,7 @@ impl<'a> UnauthorizedClient<'a> {
         }
     }
 
-    pub fn authorize(&self, base_url: &str) -> anyhow::Result<String> {
+    pub async fn authorize(&self, base_url: &str) -> anyhow::Result<String> {
         let res = self
             .http_client
             .post(&format!("{}{}", base_url, "login/authorize"))
@@ -75,8 +75,10 @@ impl<'a> UnauthorizedClient<'a> {
                 app_version: String::from("1.0"),
                 device_name: self.app_id.clone(),
             })
-            .send()?
-            .json::<Response<Authorize>>()?;
+            .send()
+            .await?
+            .json::<Response<Authorize>>()
+            .await?;
 
         loop {
             let status = self
@@ -85,8 +87,10 @@ impl<'a> UnauthorizedClient<'a> {
                     "{}{}/{}",
                     base_url, "login/authorize", res.result.track_id
                 ))
-                .send()?
-                .json::<Response<AuthorizeTrack>>()?
+                .send()
+                .await?
+                .json::<Response<AuthorizeTrack>>()
+                .await?
                 .result
                 .status;
             if status == "granted" {
@@ -97,20 +101,22 @@ impl<'a> UnauthorizedClient<'a> {
         Ok(res.result.app_token)
     }
 
-    fn get_api_version(&self) -> anyhow::Result<ApiVersion> {
+    async fn get_api_version(&self) -> anyhow::Result<ApiVersion> {
         Ok(self
             .http_client
             .get("http://mafreebox.freebox.fr/api_version")
-            .send()?
-            .json::<ApiVersion>()?)
+            .send()
+            .await?
+            .json::<ApiVersion>()
+            .await?)
     }
 
-    pub fn get_api_domain(&self) -> anyhow::Result<String> {
-        Ok(self.get_api_version()?.api_domain)
+    pub async fn get_api_domain(&self) -> anyhow::Result<String> {
+        Ok(self.get_api_version().await?.api_domain)
     }
 
-    pub fn get_base_url(&self) -> anyhow::Result<String> {
-        let api_version = self.get_api_version()?;
+    pub async fn get_base_url(&self) -> anyhow::Result<String> {
+        let api_version = self.get_api_version().await?;
 
         Ok(format!(
             "https://{}:{}{}v{}/",
@@ -119,18 +125,20 @@ impl<'a> UnauthorizedClient<'a> {
             api_version.api_base_url,
             api_version
                 .api_version
-                .split(".")
+                .split('.')
                 .next()
                 .ok_or(InvalidVersionError)?
         ))
     }
 
-    pub fn get_session(&self, base_url: &str, app_token: &str) -> anyhow::Result<String> {
+    pub async fn get_session(&self, base_url: &str, app_token: &str) -> anyhow::Result<String> {
         let challenge = self
             .http_client
             .get(&format!("{}{}", base_url, "login/"))
-            .send()?
-            .json::<Response<Login>>()?
+            .send()
+            .await?
+            .json::<Response<Login>>()
+            .await?
             .result
             .challenge;
 
@@ -142,10 +150,12 @@ impl<'a> UnauthorizedClient<'a> {
             .post(&format!("{}{}", base_url, "login/session"))
             .json(&StartSession {
                 app_id: self.app_id.clone(),
-                password: password,
+                password,
             })
-            .send()?
-            .json::<Response<Session>>()?
+            .send()
+            .await?
+            .json::<Response<Session>>()
+            .await?
             .result
             .session_token)
     }
