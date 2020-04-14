@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone)]
 pub struct FreeClient {
     http_client: reqwest::Client,
     base_url: String,
@@ -177,6 +178,17 @@ pub struct LanHost {
     pub l3connectivities: Option<Vec<LanHostL3Connectivity>>,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct WifiState {
+    pub enabled: bool,
+    pub mac_filter_state: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct UpdateWifiState {
+    pub enabled: bool,
+}
+
 impl FreeClient {
     pub async fn new(app_id: &str, config_path: &str) -> anyhow::Result<FreeClient> {
         let http_client = reqwest::ClientBuilder::new()
@@ -234,6 +246,28 @@ impl FreeClient {
             .result)
     }
 
+    async fn put<T, B>(&self, url: &str, body: &B) -> anyhow::Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: serde::ser::Serialize,
+    {
+        let session =
+            crate::unauthorized_client::UnauthorizedClient::new(&self.http_client, &self.app_id)
+                .get_session(&self.base_url, &self.app_token)
+                .await?;
+
+        Ok(self
+            .http_client
+            .put(url)
+            .header("X-Fbx-App-Auth", session)
+            .json(body)
+            .send()
+            .await?
+            .json::<Response<T>>()
+            .await?
+            .result)
+    }
+
     #[allow(unused)]
     async fn get_text(&self, url: &str) -> anyhow::Result<String> {
         let session =
@@ -245,6 +279,27 @@ impl FreeClient {
             .http_client
             .get(url)
             .header("X-Fbx-App-Auth", session)
+            .send()
+            .await?
+            .text()
+            .await?)
+    }
+
+    #[allow(unused)]
+    async fn put_text<B>(&self, url: &str, body: &B) -> anyhow::Result<String>
+    where
+        B: serde::ser::Serialize,
+    {
+        let session =
+            crate::unauthorized_client::UnauthorizedClient::new(&self.http_client, &self.app_id)
+                .get_session(&self.base_url, &self.app_token)
+                .await?;
+
+        Ok(self
+            .http_client
+            .put(url)
+            .header("X-Fbx-App-Auth", session)
+            .json(body)
             .send()
             .await?
             .text()
@@ -266,6 +321,19 @@ impl FreeClient {
             "{}{}/{}/",
             self.base_url, "lan/browser", interface
         ))
+        .await
+    }
+
+    pub async fn get_wifi_status(&self) -> anyhow::Result<WifiState> {
+        self.get(&format!("{}{}/", self.base_url, "wifi/config/"))
+            .await
+    }
+
+    pub async fn update_wifi_status(&self, enabled: bool) -> anyhow::Result<WifiState> {
+        self.put(
+            &format!("{}{}/", self.base_url, "wifi/config/",),
+            &UpdateWifiState { enabled },
+        )
         .await
     }
 }
