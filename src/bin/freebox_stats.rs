@@ -78,7 +78,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     println!(
-        "xdsl_status,api_domain={} status={:?},protocol={:?},modulation={:?},uptime={}i {}",
+        "xdsl_status,api_domain={} status=\"{:?}\",protocol=\"{:?}\",modulation=\"{:?}\",uptime={}i {}",
         client.api_domain,
         xdsl_status.status.status,
         xdsl_status.status.protocol,

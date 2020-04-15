@@ -17,9 +17,9 @@ async fn wifi_status(data: web::Data<AppState>) -> impl Responder {
 }
 
 async fn restart_wifi(data: web::Data<AppState>) -> impl Responder {
-    &data.free_client.update_wifi_status(false).await.unwrap();
+    data.free_client.update_wifi_status(false).await.unwrap();
     delay_for(Duration::from_secs(5)).await;
-    &data.free_client.update_wifi_status(true).await.unwrap();
+    data.free_client.update_wifi_status(true).await.unwrap();
     String::from("done")
 }
 
