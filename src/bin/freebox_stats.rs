@@ -53,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lan_hosts = client.get_hosts_on_lan("pub").await?;
 
     println!(
-        "connection_status,api_domain={} type={:?},media={:?},state={:?} {}",
+        "connection_status,api_domain={} type=\"{:?}\",media=\"{:?}\",state=\"{:?}\" {}",
         client.api_domain,
         connection_status.ty,
         connection_status.media,
@@ -73,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         client.api_domain, connection_status.bandwidth_down, connection_status.bandwidth_up, ts
     );
     println!(
-        "connection_status,api_domain={} ipv4={},ipv6={} {}",
+        "connection_status,api_domain={} ipv4=\"{}\",ipv6=\"{}\" {}",
         client.api_domain, connection_status.ipv4, connection_status.ipv6, ts
     );
 
@@ -97,16 +97,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for host in lan_hosts {
         println!(
-            "lan_hosts,api_domain={},primary_name={},l2ident={} reachable={},active={} {}",
+            "lan_hosts,api_domain={},reachable={},active={},primary_name={},l2ident={} host=1i {}",
             client.api_domain,
+            if host.reachable { "yes" } else { "no" },
+            if host.active { "yes" } else { "no" },
             if host.primary_name == "" {
                 String::from("null")
             } else {
                 host.primary_name.replace(' ', "_")
             },
             host.l2ident.id,
-            host.reachable,
-            host.active,
             ts
         );
     }
