@@ -83,6 +83,8 @@ pub enum XDSLStatusProtocol {
     Readsl2,
     Adsl2M,
     Adsl2plusM,
+    #[serde(rename = "vdsl2_17a")]
+    Vdsl217a,
     Unknown,
 }
 
